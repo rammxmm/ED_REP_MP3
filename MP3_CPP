@@ -1,0 +1,327 @@
+/*
+    REPRODUCTOR MUSICAL EN C++
+    LISTAS DOBLEMENTE ENLAZADAS
+    Ahora puedes ESCRIBIR el nombre de la canción
+*/
+
+#include <windows.h>
+#include <string>
+
+using namespace std;
+
+// ================= NODO =================
+struct Cancion {
+
+    string nombre;
+
+    Cancion* siguiente;
+    Cancion* anterior;
+};
+
+// ================= LISTA =================
+class Playlist {
+
+private:
+
+    Cancion* inicio;
+    Cancion* actual;
+
+public:
+
+    Playlist() {
+
+        inicio = NULL;
+        actual = NULL;
+    }
+
+    // AGREGAR
+    void agregar(string nombre) {
+
+        Cancion* nueva = new Cancion();
+
+        nueva->nombre = nombre;
+        nueva->siguiente = NULL;
+        nueva->anterior = NULL;
+
+        if(inicio == NULL) {
+
+            inicio = nueva;
+            actual = nueva;
+        }
+        else {
+
+            Cancion* temp = inicio;
+
+            while(temp->siguiente != NULL) {
+
+                temp = temp->siguiente;
+            }
+
+            temp->siguiente = nueva;
+            nueva->anterior = temp;
+        }
+    }
+
+    // SIGUIENTE
+    void siguiente() {
+
+        if(actual != NULL && actual->siguiente != NULL) {
+
+            actual = actual->siguiente;
+        }
+    }
+
+    // ANTERIOR
+    void anterior() {
+
+        if(actual != NULL && actual->anterior != NULL) {
+
+            actual = actual->anterior;
+        }
+    }
+
+    // ACTUAL
+    string obtenerActual() {
+
+        if(actual != NULL) {
+
+            return actual->nombre;
+        }
+
+        return "Sin canciones";
+    }
+
+    // MOSTRAR LISTA
+    string mostrarLista() {
+
+        string lista = "";
+
+        Cancion* temp = inicio;
+
+        while(temp != NULL) {
+
+            lista += temp->nombre + "\r\n";
+
+            temp = temp->siguiente;
+        }
+
+        return lista;
+    }
+};
+
+// ================= VARIABLES =================
+Playlist playlist;
+
+HWND textoActual;
+HWND textoLista;
+HWND cajaTexto;
+
+// ================= IDS =================
+#define BTN_SIGUIENTE 1
+#define BTN_ANTERIOR 2
+#define BTN_AGREGAR 3
+
+// ================= ACTUALIZAR =================
+void actualizar() {
+
+    string actual =
+        "Reproduciendo:\r\n" + playlist.obtenerActual();
+
+    SetWindowText(textoActual, actual.c_str());
+
+    SetWindowText(textoLista,
+                  playlist.mostrarLista().c_str());
+}
+
+// ================= VENTANA =================
+LRESULT CALLBACK WindowProcedure(HWND hwnd,
+                                 UINT msg,
+                                 WPARAM wp,
+                                 LPARAM lp) {
+
+    switch(msg) {
+
+    case WM_CREATE:
+
+        // BOTON ANTERIOR
+        CreateWindow(
+            "BUTTON",
+            "Anterior",
+            WS_VISIBLE | WS_CHILD,
+            50, 300, 100, 40,
+            hwnd,
+            (HMENU)BTN_ANTERIOR,
+            NULL,
+            NULL
+        );
+
+        // BOTON SIGUIENTE
+        CreateWindow(
+            "BUTTON",
+            "Siguiente",
+            WS_VISIBLE | WS_CHILD,
+            170, 300, 100, 40,
+            hwnd,
+            (HMENU)BTN_SIGUIENTE,
+            NULL,
+            NULL
+        );
+
+        // BOTON AGREGAR
+        CreateWindow(
+            "BUTTON",
+            "Agregar",
+            WS_VISIBLE | WS_CHILD,
+            290, 300, 100, 40,
+            hwnd,
+            (HMENU)BTN_AGREGAR,
+            NULL,
+            NULL
+        );
+
+        // TEXTO ACTUAL
+        textoActual = CreateWindow(
+            "STATIC",
+            "",
+            WS_VISIBLE | WS_CHILD,
+            50, 20, 300, 60,
+            hwnd,
+            NULL,
+            NULL,
+            NULL
+        );
+
+        // LISTA
+        textoLista = CreateWindow(
+            "STATIC",
+            "",
+            WS_VISIBLE | WS_CHILD,
+            50, 100, 300, 150,
+            hwnd,
+            NULL,
+            NULL,
+            NULL
+        );
+
+        // CAJA DE TEXTO
+        cajaTexto = CreateWindow(
+            "EDIT",
+            "",
+            WS_VISIBLE | WS_CHILD | WS_BORDER,
+            50, 260, 340, 25,
+            hwnd,
+            NULL,
+            NULL,
+            NULL
+        );
+
+        // CANCIONES INICIALES
+        playlist.agregar("Belanova - Rosa Pastel");
+        playlist.agregar("The Weeknd - Starboy");
+
+        actualizar();
+
+        break;
+
+    case WM_COMMAND:
+
+        switch(LOWORD(wp)) {
+
+        // SIGUIENTE
+        case BTN_SIGUIENTE:
+
+            playlist.siguiente();
+            actualizar();
+
+            break;
+
+        // ANTERIOR
+        case BTN_ANTERIOR:
+
+            playlist.anterior();
+            actualizar();
+
+            break;
+
+        // AGREGAR
+        case BTN_AGREGAR: {
+
+            char nombre[100];
+
+            GetWindowText(cajaTexto,
+                          nombre,
+                          100);
+
+            // EVITAR VACIOS
+            if(strlen(nombre) > 0) {
+
+                playlist.agregar(nombre);
+
+                SetWindowText(cajaTexto, "");
+
+                actualizar();
+            }
+
+            break;
+        }
+        }
+
+        break;
+
+    case WM_DESTROY:
+
+        PostQuitMessage(0);
+
+        break;
+
+    default:
+
+        return DefWindowProc(hwnd,
+                             msg,
+                             wp,
+                             lp);
+    }
+
+    return 0;
+}
+
+// ================= MAIN =================
+int WINAPI WinMain(HINSTANCE hInst,
+                   HINSTANCE hPrev,
+                   LPSTR args,
+                   int ncmdshow) {
+
+    WNDCLASS wc = {0};
+
+    wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hInstance = hInst;
+    wc.lpszClassName = "Reproductor";
+    wc.lpfnWndProc = WindowProcedure;
+
+    RegisterClass(&wc);
+
+    CreateWindow(
+        "Reproductor",
+        "Reproductor Musical",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        200,
+        100,
+        500,
+        450,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    );
+
+    MSG msg = {0};
+
+    while(GetMessage(&msg, NULL, 0, 0)) {
+
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return 0;
+}
